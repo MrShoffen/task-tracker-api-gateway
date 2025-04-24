@@ -2,7 +2,12 @@ name: Publish Docker Image
 on:
   push:
     branches:
-      - 'release/**'
+      - master
+    paths:
+      - 'build.gradle'
+
+permissions:
+  contents: write
 
 jobs:
   push-docker-image:
@@ -28,3 +33,51 @@ jobs:
           docker build -t mrshoffen/task-tracker-api-gateway:latest .
           docker images
           docker push mrshoffen/task-tracker-api-gateway:latest
+
+
+
+      - name: Extract version from build.gradle
+        id: extract-version
+        run: |
+          VERSION=$(grep "version =" build.gradle | cut -d "'" -f 2)
+          echo "Extracted version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag
+        if: steps.extract-version.outputs.version != ''
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git tag -a "${{ steps.extract-version.outputs.version }}" -m "Release ${{ steps.extract-version.outputs.version }}"
+          git push origin "${{ steps.extract-version.outputs.version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.extract-version.outputs.version }}
+          release_name: Release ${{ steps.extract-version.outputs.version }}
+          body: |
+            Автоматический релиз для версии ${{ steps.extract-version.outputs.version }}
+            Изменения: https://github.com/${{ github.repository }}/compare/previous-tag...${{ github.sha }}
+          draft: false
+          prerelease: false
+
+      - name: Send Event
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_WORKFLOW }}
+          repository: MrShoffen/task-tracker
+          event-type: update_submodule
+          client-payload: '{
+                  "source_repo": "${{ github.repository }}",
+                   "version": "${{ steps.extract-version.outputs.version }}",
+                   "commit_hash": "${{ github.sha }}",
+                   "custom_data": {
+                     "author": "${{ github.actor }}",
+                     "repo": "${{ github.repository }}"
+                   }
+                 }'

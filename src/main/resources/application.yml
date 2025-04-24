@@ -1,4 +1,14 @@
-### ???????? ? ?????? ??????? (????? ? ??? ????????? ???????, ? ??? ??? ????????)
+### Configurations from config server
+jwt-user:
+  keys:
+    access-token-key: '{"kty":"oct","k":"h4dfgRX5ZRZooHem3mEnctZ-KtR9FoESgCnH-3BNgde8"}'
+#    refresh-token-key: '{"kty":"oct","k":"95dfNwiBe7vR5KnbguLr5irJD-a2gesF"}'
+#  ttl:
+#    access-ttl: 20 #Minutes
+#    refresh-ttl: 1 #Hours
+
+
+
 discovery-service-user:
   server:
     hostname: localhost #discovery-user profile property
@@ -12,6 +22,9 @@ kafka-user:
 ###
 
 
+gateway:
+  api-prefix: /api/v1
+
 
 spring:
   application:
@@ -21,12 +34,42 @@ spring:
   config:
     import: optional:configserver:http://${CONFIG_SERVER_USER}:${CONFIG_SERVER_PASSWORD}@${CONFIG_SERVER_HOST:localhost}:${CONFIG_SERVER_PORT:8012}
 
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service #login, refresh, logout
+          uri: lb://authentication-ws
+          predicates:
+            - Path=${gateway.api-prefix}/auth/**
+          filters:
+            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
+
+        - id: user-registration #post new user
+          uri: lb://user-profile-ws
+          predicates:
+            - Path=${gateway.api-prefix}/users
+            - Method=POST
+          filters:
+            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
+
+        - id: user-registration #post new user
+          uri: lb://user-profile-ws
+          predicates:
+            - Path=${gateway.api-prefix}/users/me
+            - Method=GET
+          filters:
+            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
+            - JwtAuthorizationFilter
+
 server.port: 8080
 
 eureka:
   client:
     service-url:
       defaultZone: http://${discovery-service-user.server.hostname}:${discovery-service-user.server.port}/eureka
+    register-with-eureka: false
+  instance:
+    prefer-ip-address: true
 
 
 management:
