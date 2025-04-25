@@ -2,12 +2,10 @@
 jwt-user:
   keys:
     access-token-key: '{"kty":"oct","k":"h4dfgRX5ZRZooHem3mEnctZ-KtR9FoESgCnH-3BNgde8"}'
-#    refresh-token-key: '{"kty":"oct","k":"95dfNwiBe7vR5KnbguLr5irJD-a2gesF"}'
-#  ttl:
-#    access-ttl: 20 #Minutes
-#    refresh-ttl: 1 #Hours
 
-
+redis-user:
+  host: 192.168.0.125
+  port: 6379
 
 discovery-service-user:
   server:
@@ -30,12 +28,25 @@ spring:
   application:
     name: api-gateway
   profiles:
-    active: discovery-service-user, jwt-user
+    active: discovery-service-user, jwt-user, redis-user
   config:
     import: optional:configserver:http://${CONFIG_SERVER_USER}:${CONFIG_SERVER_PASSWORD}@${CONFIG_SERVER_HOST:localhost}:${CONFIG_SERVER_PORT:8012}
 
+  data.redis:
+    host: ${redis-user.host}
+    port: ${redis-user.port}
+
   cloud:
     gateway:
+      httpclient:
+        connect-timeout: 1000
+        response-timeout: 5s
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            rate-limiter: '#{@redisRateLimiter}'
+            key-resolver: '#{@ipKeyResolver}'
+
       routes:
         - id: auth-service #login, refresh, logout
           uri: lb://authentication-ws
@@ -52,7 +63,7 @@ spring:
           filters:
             - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
 
-        - id: user-registration #post new user
+        - id: user-registration #get current user
           uri: lb://user-profile-ws
           predicates:
             - Path=${gateway.api-prefix}/users/me
@@ -82,4 +93,4 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, gateway, mappings
+        include: '*'
