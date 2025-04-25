@@ -1,6 +1,7 @@
 package org.mrshoffen.tasktracker.apigateway.security;
 
 import org.mrshoffen.tasktracker.apigateway.security.service.JwtSignatureValidator;
+import org.mrshoffen.tasktracker.commons.web.authentication.AuthenticationAttributes;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpCookie;
@@ -34,12 +35,10 @@ public class JwtAuthorizationFilter extends AbstractGatewayFilterFactory<JwtAuth
         return (exchange, chain) -> {
             try {
                 ServerHttpRequest request = exchange.getRequest();
-                HttpCookie accessToken = request.getCookies().getFirst("accessToken");
-                //todo move accessToken to constant and header value to commons
+                HttpCookie accessToken = request.getCookies().getFirst(AuthenticationAttributes.ACCESS_TOKEN_COOKIE_NAME);
                 Map<String, String> payload = jwtValidator.validateAndExtractPayload(accessToken.getValue());
                 ServerHttpRequest modifiedRequest = request.mutate()
-                        .header("X-User-ID", payload.get("userId"))
-                        .header("X-User-Email", payload.get("userEmail"))
+                        .header(AuthenticationAttributes.AUTHORIZED_USER_HEADER_NAME, payload.get("userId"))
                         .build();
                 return chain.filter(exchange.mutate().request(modifiedRequest).build());
             } catch (Exception ex){

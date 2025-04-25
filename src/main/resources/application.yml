@@ -2,15 +2,15 @@
 jwt-user:
   keys:
     access-token-key: '{"kty":"oct","k":"h4dfgRX5ZRZooHem3mEnctZ-KtR9FoESgCnH-3BNgde8"}'
-
+#
 redis-user:
   host: 192.168.0.125
   port: 6379
-
+#
 discovery-service-user:
   server:
-    hostname: localhost #discovery-user profile property
-    port: 8010 #discovery-user profile properdiscovery
+    hostname: localhost
+    port: 8010
   credentials:
     username: user
     password: pass
@@ -63,7 +63,7 @@ spring:
           filters:
             - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
 
-        - id: user-registration #get current user
+        - id: current-user #get current user
           uri: lb://user-profile-ws
           predicates:
             - Path=${gateway.api-prefix}/users/me
