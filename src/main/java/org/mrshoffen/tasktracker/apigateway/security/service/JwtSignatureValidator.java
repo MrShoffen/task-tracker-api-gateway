@@ -7,8 +7,10 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
 import org.mrshoffen.tasktracker.apigateway.security.exception.InvalidJwsSignatureException;
+import org.mrshoffen.tasktracker.apigateway.security.exception.JwtExpiredException;
 
 import java.text.ParseException;
+import java.util.Date;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -17,7 +19,7 @@ public class JwtSignatureValidator {
 
     private final JWSVerifier jwsVerifier;
 
-    public Map<String, String> validateAndExtractPayload(String accessToken) throws InvalidJwsSignatureException {
+    public Map<String, String> validateAndExtractPayload(String accessToken) throws InvalidJwsSignatureException, JwtExpiredException {
         try {
             if (accessToken == null) {
                 throw new InvalidJwsSignatureException("Отсутствует access токен");
@@ -27,7 +29,14 @@ public class JwtSignatureValidator {
 
             if (signedJWT.verify(this.jwsVerifier)) {
                 var claimsSet = signedJWT.getJWTClaimsSet();
-                return extractPayload(claimsSet);
+
+                if (claimsSet.getExpirationTime().before(new Date())){
+                    throw new JwtExpiredException("Access токен просрочен");
+                }
+
+
+                    Map<String, String> claims = extractPayload(claimsSet);
+                return claims;
             } else {
                 throw new InvalidJwsSignatureException("Некорретная подпись access токена");
             }

@@ -72,6 +72,23 @@ spring:
             - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
             - JwtAuthorizationFilter
 
+        - id: current-user-settings
+          uri: lb://user-settings-ws
+          predicates:
+            - Path=${gateway.api-prefix}/users/me/settings
+            - Method=GET
+          filters:
+            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
+            - JwtAuthorizationFilter
+
+        - id: check-user #get current user
+          uri: lb://user-profile-ws
+          predicates:
+            - Path=${gateway.api-prefix}/users/status
+            - Method=GET
+          filters:
+            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
+
 server.port: 8080
 
 eureka:

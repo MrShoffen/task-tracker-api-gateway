@@ -36,13 +36,16 @@ public class JwtAuthorizationFilter extends AbstractGatewayFilterFactory<JwtAuth
             try {
                 ServerHttpRequest request = exchange.getRequest();
                 HttpCookie accessToken = request.getCookies().getFirst(AuthenticationAttributes.ACCESS_TOKEN_COOKIE_NAME);
+                if (accessToken == null) {
+                    return onError(exchange, HttpStatus.UNAUTHORIZED, "Отсутствует jwt access токен");
+                }
                 Map<String, String> payload = jwtValidator.validateAndExtractPayload(accessToken.getValue());
                 ServerHttpRequest modifiedRequest = request.mutate()
                         .header(AuthenticationAttributes.AUTHORIZED_USER_HEADER_NAME, payload.get("userId"))
                         .build();
                 return chain.filter(exchange.mutate().request(modifiedRequest).build());
-            } catch (Exception ex){
-                return onError(exchange, HttpStatus.UNAUTHORIZED, "Некорректный access токен");
+            } catch (Exception ex) {
+                return onError(exchange, HttpStatus.UNAUTHORIZED, ex.getMessage());
             }
         };
     }
