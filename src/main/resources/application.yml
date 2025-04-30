@@ -20,7 +20,7 @@ kafka-user:
 ###
 
 gateway:
-  api-prefix: /api/v1k
+  api-prefix: /api/v1
 
 spring:
   application:
