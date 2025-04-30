@@ -19,10 +19,8 @@ kafka-user:
   hostname: test
 ###
 
-
 gateway:
-  api-prefix: /api/v1
-
+  api-prefix: /api/v1k
 
 spring:
   application:
@@ -47,48 +45,6 @@ spring:
             rate-limiter: '#{@redisRateLimiter}'
             key-resolver: '#{@ipKeyResolver}'
 
-      routes:
-        - id: auth-service #login, refresh, logout
-          uri: lb://authentication-ws
-          predicates:
-            - Path=${gateway.api-prefix}/auth/**
-          filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
-
-        - id: user-registration #post new user
-          uri: lb://user-profile-ws
-          predicates:
-            - Path=${gateway.api-prefix}/users
-            - Method=POST
-          filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
-
-        - id: current-user #get current user
-          uri: lb://user-profile-ws
-          predicates:
-            - Path=${gateway.api-prefix}/users/me
-            - Method=GET
-          filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
-            - JwtAuthorizationFilter
-
-        - id: current-user-settings
-          uri: lb://user-settings-ws
-          predicates:
-            - Path=${gateway.api-prefix}/users/me/settings
-            - Method=GET
-          filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
-            - JwtAuthorizationFilter
-
-        - id: check-user #get current user
-          uri: lb://user-profile-ws
-          predicates:
-            - Path=${gateway.api-prefix}/users/status
-            - Method=GET
-          filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
-
 server.port: 8080
 
 eureka:
@@ -98,7 +54,6 @@ eureka:
     register-with-eureka: false
   instance:
     prefer-ip-address: true
-
 
 management:
   endpoint:

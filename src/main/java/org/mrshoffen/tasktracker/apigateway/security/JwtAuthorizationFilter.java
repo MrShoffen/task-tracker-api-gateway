@@ -3,6 +3,7 @@ package org.mrshoffen.tasktracker.apigateway.security;
 import org.mrshoffen.tasktracker.apigateway.security.service.JwtSignatureValidator;
 import org.mrshoffen.tasktracker.commons.web.authentication.AuthenticationAttributes;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
@@ -18,36 +19,30 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
-public class JwtAuthorizationFilter extends AbstractGatewayFilterFactory<JwtAuthorizationFilter.Config> {
+public class JwtAuthorizationFilter implements GatewayFilter {
 
     private final JwtSignatureValidator jwtValidator;
 
     public JwtAuthorizationFilter(JwtSignatureValidator jwtValidator) {
-        super(Config.class);
         this.jwtValidator = jwtValidator;
     }
 
-    public static class Config {
-    }
-
     @Override
-    public GatewayFilter apply(Config config) {
-        return (exchange, chain) -> {
-            try {
-                ServerHttpRequest request = exchange.getRequest();
-                HttpCookie accessToken = request.getCookies().getFirst(AuthenticationAttributes.ACCESS_TOKEN_COOKIE_NAME);
-                if (accessToken == null) {
-                    return onError(exchange, HttpStatus.UNAUTHORIZED, "Отсутствует jwt access токен");
-                }
-                Map<String, String> payload = jwtValidator.validateAndExtractPayload(accessToken.getValue());
-                ServerHttpRequest modifiedRequest = request.mutate()
-                        .header(AuthenticationAttributes.AUTHORIZED_USER_HEADER_NAME, payload.get("userId"))
-                        .build();
-                return chain.filter(exchange.mutate().request(modifiedRequest).build());
-            } catch (Exception ex) {
-                return onError(exchange, HttpStatus.UNAUTHORIZED, ex.getMessage());
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        try {
+            ServerHttpRequest request = exchange.getRequest();
+            HttpCookie accessToken = request.getCookies().getFirst(AuthenticationAttributes.ACCESS_TOKEN_COOKIE_NAME);
+            if (accessToken == null) {
+                return onError(exchange, HttpStatus.UNAUTHORIZED, "Отсутствует jwt access токен");
             }
-        };
+            Map<String, String> payload = jwtValidator.validateAndExtractPayload(accessToken.getValue());
+            ServerHttpRequest modifiedRequest = request.mutate()
+                    .header(AuthenticationAttributes.AUTHORIZED_USER_HEADER_NAME, payload.get("userId"))
+                    .build();
+            return chain.filter(exchange.mutate().request(modifiedRequest).build());
+        } catch (Exception ex) {
+            return onError(exchange, HttpStatus.UNAUTHORIZED, ex.getMessage());
+        }
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, HttpStatus httpStatus, String message) {
