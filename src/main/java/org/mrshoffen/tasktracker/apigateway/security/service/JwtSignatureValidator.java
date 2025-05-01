@@ -30,13 +30,10 @@ public class JwtSignatureValidator {
             if (signedJWT.verify(this.jwsVerifier)) {
                 var claimsSet = signedJWT.getJWTClaimsSet();
 
-                if (claimsSet.getExpirationTime().before(new Date())){
+                if (claimsSet.getExpirationTime().before(new Date())) {
                     throw new JwtExpiredException("Access токен просрочен");
                 }
-
-
-                    Map<String, String> claims = extractPayload(claimsSet);
-                return claims;
+                return extractPayload(claimsSet);
             } else {
                 throw new InvalidJwsSignatureException("Некорретная подпись access токена");
             }
@@ -53,6 +50,4 @@ public class JwtSignatureValidator {
                         entry -> (String) entry.getValue()
                 ));
     }
-
-
 }

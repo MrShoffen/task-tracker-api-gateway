@@ -18,7 +18,7 @@ public class SecurityConfiguration {
 
     @Bean
     JwtSignatureValidator jwtValidator(@Value("${jwt-user.keys.access-token-key}") String accessKey) throws ParseException, JOSEException {
-        String key = trimLeadingCharacter(trimTrailingCharacter(accessKey, '\''), '\'');
+        String key = trimLeadingCharacter(trimTrailingCharacter(accessKey, '\''), '\''); //side effect of keeping key in config server
         return new JwtSignatureValidator(new MACVerifier(OctetSequenceKey.parse(key)));
     }
 }

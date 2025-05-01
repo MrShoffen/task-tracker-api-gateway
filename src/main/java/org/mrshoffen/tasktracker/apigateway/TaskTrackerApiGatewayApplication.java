@@ -9,9 +9,7 @@ import org.springframework.core.env.Environment;
 public class TaskTrackerApiGatewayApplication {
 
     public static void main(String[] args) {
-        ConfigurableApplicationContext context = SpringApplication.run(TaskTrackerApiGatewayApplication.class, args);
-        Environment bean = context.getBean(Environment.class);
-
+        SpringApplication.run(TaskTrackerApiGatewayApplication.class, args);
     }
 
 }
