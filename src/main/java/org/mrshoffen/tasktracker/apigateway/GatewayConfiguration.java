@@ -11,7 +11,7 @@ public class GatewayConfiguration {
 
     @Bean
     public RedisRateLimiter redisRateLimiter() {
-        return new RedisRateLimiter(10, 20);
+        return new RedisRateLimiter(1, 14, 2);
     }
 
     @Bean

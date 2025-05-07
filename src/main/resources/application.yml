@@ -17,10 +17,13 @@ discovery-service-user:
 #
 kafka-user:
   hostname: test
+
+#
+app:
+  gateway:
+    api-prefix: /api/v1
 ###
 
-gateway:
-  api-prefix: /api/v1
 
 spring:
   application:
@@ -44,47 +47,82 @@ spring:
           args:
             rate-limiter: '#{@redisRateLimiter}'
             key-resolver: '#{@ipKeyResolver}'
+        - RewritePath=${app.gateway.api-prefix}/?(?<segment>.*), /$\{segment}
+
       routes:
+        ### Authentication and user routes
         - id: auth-service #login, refresh, logout
           uri: lb://authentication-ws
           predicates:
-            - Path=${gateway.api-prefix}/auth/**
-          filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
-
-        - id: user-registration #post new user
-          uri: lb://user-profile-ws
-          predicates:
-            - Path=${gateway.api-prefix}/users
-            - Method=POST
-          filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
+            - Path=${app.gateway.api-prefix}/auth/**
 
         - id: current-user #get current user
           uri: lb://user-profile-ws
           predicates:
-            - Path=${gateway.api-prefix}/users/me
+            - Path=${app.gateway.api-prefix}/users/me
             - Method=GET
           filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
             - JwtAuthorizationFilter
 
         - id: current-user-settings
           uri: lb://user-settings-ws
           predicates:
-            - Path=${gateway.api-prefix}/users/me/settings
+            - Path=${app.gateway.api-prefix}/users/me/settings
             - Method=GET
           filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
             - JwtAuthorizationFilter
 
-        - id: check-user #get current user
-          uri: lb://user-profile-ws
+        ### Routes for managing user workspace
+        - id: create-get-workspaces #get all users workspaces or POST new one
+          uri: lb://workspace-manager-rs
           predicates:
-            - Path=${gateway.api-prefix}/users/status
+            - Path=${app.gateway.api-prefix}/workspaces
+            - Method=POST, GET
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: get-workspace-with-id #get workspace with specified id
+          uri: lb://workspace-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}
+            - Method= GET
+          filters:
+            - JwtAuthorizationFilter
+
+        ### Routes for managing user desks
+        - id: create-get-desks #get all users desks in given workspace or get all desks in workspace
+          uri: lb://desk-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks
+            - Method=POST, GET
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: get-desks-with-id #get desk with specified id
+          uri: lb://desk-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}
             - Method=GET
           filters:
-            - RewritePath=${gateway.api-prefix}/?(?<segment>.*), /$\{segment}
+            - JwtAuthorizationFilter
+
+        ### Routes for managing user tasks
+        - id: create-get-tasks
+          uri: lb://task-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks
+            - Method=POST, GET
+          filters:
+            - JwtAuthorizationFilter
+
+        ### Routes for aggregation
+        - id: get-workspaces-full #full information about workspace - with inner desks and tasks
+          uri: lb://aggregator-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/full
+            - Method=GET
+          filters:
+            - JwtAuthorizationFilter
 
 
 server.port: 8080
