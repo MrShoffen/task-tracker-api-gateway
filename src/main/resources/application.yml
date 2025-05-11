@@ -11,12 +11,6 @@ discovery-service-user:
   server:
     hostname: localhost
     port: 8010
-  credentials:
-    username: user
-    password: pass
-#
-kafka-user:
-  hostname: test
 
 #
 app:
@@ -28,8 +22,6 @@ app:
 spring:
   application:
     name: api-gateway
-  profiles:
-    active: discovery-service-user, jwt-user, redis-user
   config:
     import: optional:configserver:http://${CONFIG_SERVER_USER}:${CONFIG_SERVER_PASSWORD}@${CONFIG_SERVER_HOST:localhost}:${CONFIG_SERVER_PORT:8012}
 
@@ -81,15 +73,16 @@ spring:
           filters:
             - JwtAuthorizationFilter
 
-        - id: get-workspace-with-id #get workspace with specified id
+        - id: delete-workspace-with-id #delete workspace with specified id
           uri: lb://workspace-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}
-            - Method= GET
+            - Method= DELETE
           filters:
             - JwtAuthorizationFilter
 
         ### Routes for managing user desks
+        ####################################
         - id: create-get-desks #get all users desks in given workspace or get all desks in workspace
           uri: lb://desk-manager-rs
           predicates:
@@ -98,16 +91,33 @@ spring:
           filters:
             - JwtAuthorizationFilter
 
-        - id: get-desks-with-id #get desk with specified id
+        - id: delete-desks-with-id #delete desk with specified id
           uri: lb://desk-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}
-            - Method=GET
+            - Method=DELETE
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: update-desks-order #delete desk with specified id
+          uri: lb://desk-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/order
+            - Method=PATCH
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: add-notification #delete desk with specified id
+          uri: lb://desk-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/notifications
+            - Method=POST
           filters:
             - JwtAuthorizationFilter
 
         ### Routes for managing user tasks
-        - id: create-get-tasks
+        #######################################
+        - id: create-get-tasks #create task or get full list
           uri: lb://task-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks
@@ -115,7 +125,84 @@ spring:
           filters:
             - JwtAuthorizationFilter
 
+        - id: delete-task #delete task by id
+          uri: lb://task-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}
+            - Method=DELETE
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: update-task-order #update task order
+          uri: lb://task-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/order
+            - Method=PATCH
+          filters:
+            - JwtAuthorizationFilter
+
+        ### Routes for managing  COMMENTS
+        #######################################
+        - id: create-get-tasks #create task or get full list
+          uri: lb://task-comments-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/comments
+            - Method=POST, GET
+          filters:
+            - JwtAuthorizationFilter
+
+        ### Routes for managing users permissions
+        ######################################
+        - id: create-get-permissions #create permission
+          uri: lb://user-permission-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/permissions/by-email
+            - Method=POST
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: create-permissions-by-id #create task or get full list
+          uri: lb://user-permission-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/permissions/by-id
+            - Method=POST
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: get-all-permissions # get full list of permissions
+          uri: lb://user-permission-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/permissions
+            - Method= GET
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: revoke-all_permissions #create task or get full list
+          uri: lb://user-permission-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/permissions/{userId}
+            - Method= DELETE
+          filters:
+            - JwtAuthorizationFilter
+
+        #        - id: delete-task #delete task by id
+        #          uri: lb://task-manager-rs
+        #          predicates:
+        #            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}
+        #            - Method=DELETE
+        #          filters:
+        #            - JwtAuthorizationFilter
+        #
+        #        - id: update-task-order #update task order
+        #          uri: lb://task-manager-rs
+        #          predicates:
+        #            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/order
+        #            - Method=PATCH
+        #          filters:
+        #            - JwtAuthorizationFilter
+
         ### Routes for aggregation
+        #######################################
         - id: get-workspaces-full #full information about workspace - with inner desks and tasks
           uri: lb://aggregator-rs
           predicates:
@@ -124,6 +211,21 @@ spring:
           filters:
             - JwtAuthorizationFilter
 
+        - id: get-desk-full #full information about desk - with inner desks and tasks
+          uri: lb://aggregator-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/full
+            - Method=GET
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: get-task-comments-count #information about comments on each task
+          uri: lb://aggregator-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/comments-count
+            - Method=GET
+          filters:
+            - JwtAuthorizationFilter
 
 server.port: 8080
 
