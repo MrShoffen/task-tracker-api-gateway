@@ -17,7 +17,7 @@ app:
   gateway:
     api-prefix: /api/v1
   frontend:
-    origin: "http://192.168.0.190:5173"
+    origin: "http://192.168.0.125:5173"
 ###
 
 logging:
