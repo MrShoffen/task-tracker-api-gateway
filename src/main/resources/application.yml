@@ -16,8 +16,14 @@ discovery-service-user:
 app:
   gateway:
     api-prefix: /api/v1
+  frontend:
+    origin: "http://192.168.0.190:5173"
 ###
 
+logging:
+  level:
+    org.springframework.web.reactive: DEBUG
+    org.springframework.cloud.gateway: TRACE
 
 spring:
   application:
@@ -31,6 +37,22 @@ spring:
 
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - ${app.frontend.origin}
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
       httpclient:
         connect-timeout: 1000
         response-timeout: 5s
@@ -43,24 +65,39 @@ spring:
 
       routes:
         ### Authentication and user routes
-        - id: auth-service #login, refresh, logout
+        - id: auth-service-register
           uri: lb://authentication-ws
           predicates:
-            - Path=${app.gateway.api-prefix}/auth/**
+            - Path=${app.gateway.api-prefix}/auth/sign-up
 
-        - id: current-user #get current user
-          uri: lb://user-profile-ws
+        - id: auth-service-login
+          uri: lb://authentication-ws
           predicates:
-            - Path=${app.gateway.api-prefix}/users/me
-            - Method=GET
+            - Path=${app.gateway.api-prefix}/auth/sign-in
+
+        - id: auth-service-logout
+          uri: lb://authentication-ws
+          predicates:
+            - Path=${app.gateway.api-prefix}/auth/logout
+
+        - id: auth-service-refresh
+          uri: lb://authentication-ws
+          predicates:
+            - Path=${app.gateway.api-prefix}/auth/refresh
+
+
+        - id: auth-service #update email, password
+          uri: lb://authentication-ws
+          predicates:
+            - Path=${app.gateway.api-prefix}/auth/credentials/**
           filters:
             - JwtAuthorizationFilter
 
-        - id: current-user-settings
-          uri: lb://user-settings-ws
+
+        - id: current-user #get current user #update avatar or personal info
+          uri: lb://user-profile-ws
           predicates:
-            - Path=${app.gateway.api-prefix}/users/me/settings
-            - Method=GET
+            - Path=${app.gateway.api-prefix}/users/**
           filters:
             - JwtAuthorizationFilter
 
@@ -99,11 +136,14 @@ spring:
           filters:
             - JwtAuthorizationFilter
 
-        - id: update-desks-order #delete desk with specified id
+        - id: update-desks #delete desk with specified id
           uri: lb://desk-manager-rs
           predicates:
-            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/order
-            - Method=PATCH
+            - |
+              Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/order,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/name,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/color
+            - Method=PATCH, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
@@ -121,7 +161,7 @@ spring:
           uri: lb://task-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks
-            - Method=POST, GET
+            - Method=OPTIONS, POST, GET
           filters:
             - JwtAuthorizationFilter
 
@@ -129,15 +169,20 @@ spring:
           uri: lb://task-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}
-            - Method=DELETE
+            - Method=OPTIONS, DELETE
           filters:
             - JwtAuthorizationFilter
 
-        - id: update-task-order #update task order
+        - id: update-task #update task
           uri: lb://task-manager-rs
           predicates:
-            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/order
-            - Method=PATCH
+            - |
+              Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/name,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/completion,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/order,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/color,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/cover
+            - Method=PATCH, OPTIONS
           filters:
             - JwtAuthorizationFilter
 

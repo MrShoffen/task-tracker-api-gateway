@@ -13,6 +13,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.TreeSet;
 
 @Component
 public class JwtAuthorizationFilter extends AbstractGatewayFilterFactory<JwtAuthorizationFilter.Config> {
@@ -35,6 +36,9 @@ public class JwtAuthorizationFilter extends AbstractGatewayFilterFactory<JwtAuth
         return (exchange, chain) -> {
             try {
                 ServerHttpRequest request = exchange.getRequest();
+                if (request.getMethod() == HttpMethod.OPTIONS) {
+                    return chain.filter(exchange); // пропустить
+                }
                 HttpCookie accessToken = request.getCookies().getFirst(AuthenticationAttributes.ACCESS_TOKEN_COOKIE_NAME);
                 if (accessToken == null) {
                     return onError(exchange, HttpStatus.UNAUTHORIZED, "Отсутствует jwt access токен");

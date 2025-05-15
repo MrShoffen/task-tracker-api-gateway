@@ -11,14 +11,17 @@ public class GatewayConfiguration {
 
     @Bean
     public RedisRateLimiter redisRateLimiter() {
-        return new RedisRateLimiter(1, 14, 2);
+        return new RedisRateLimiter(1, 28, 2);
     }
 
     @Bean
     KeyResolver ipKeyResolver() {
-        return exchange -> Mono.just(
-                exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
-        );
+        return exchange -> {
+            String hostAddress = exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
+            return Mono.just(
+                    exchange.getRequest().getRemoteAddress().getAddress().getHostAddress());
+
+        };
     }
 
 }
