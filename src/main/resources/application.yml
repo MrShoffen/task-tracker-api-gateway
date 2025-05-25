@@ -20,11 +20,6 @@ app:
     origin: "http://192.168.0.125:5173"
 ###
 
-logging:
-  level:
-    org.springframework.web.reactive: DEBUG
-    org.springframework.cloud.gateway: TRACE
-
 spring:
   application:
     name: api-gateway
@@ -42,6 +37,9 @@ spring:
           '[/**]':
             allowedOrigins:
               - ${app.frontend.origin}
+              - "http://localhost:5173"
+              - "http://localhost:80"
+              - "http://localhost"
             allowedMethods:
               - GET
               - POST
@@ -106,7 +104,7 @@ spring:
           uri: lb://workspace-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces
-            - Method=POST, GET
+            - Method=POST, GET, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
@@ -114,7 +112,18 @@ spring:
           uri: lb://workspace-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}
-            - Method= DELETE
+            - Method=DELETE, OPTIONS
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: update-workspace-with-id #update workspace with specified id
+          uri: lb://workspace-manager-rs
+          predicates:
+            - |
+              Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/name,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/cover,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/access
+            - Method=PATCH, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
@@ -124,7 +133,7 @@ spring:
           uri: lb://desk-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks
-            - Method=POST, GET
+            - Method=POST, GET, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
@@ -132,7 +141,7 @@ spring:
           uri: lb://desk-manager-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}
-            - Method=DELETE
+            - Method=DELETE, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
@@ -181,7 +190,8 @@ spring:
               ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/completion,
               ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/order,
               ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/color,
-              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/cover
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/cover,
+              ${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/desk
             - Method=PATCH, OPTIONS
           filters:
             - JwtAuthorizationFilter
@@ -202,15 +212,15 @@ spring:
           uri: lb://user-permission-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/permissions/by-email
-            - Method=POST
+            - Method=POST, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
-        - id: create-permissions-by-id #create task or get full list
+        - id: create-permissions-by-id #create permission
           uri: lb://user-permission-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/permissions/by-id
-            - Method=POST
+            - Method=POST, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
@@ -222,11 +232,11 @@ spring:
           filters:
             - JwtAuthorizationFilter
 
-        - id: revoke-all_permissions #create task or get full list
+        - id: revoke-all_permissions #remove permissions
           uri: lb://user-permission-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/permissions/{userId}
-            - Method= DELETE
+            - Method= DELETE, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
@@ -255,6 +265,12 @@ spring:
             - Method=GET
           filters:
             - JwtAuthorizationFilter
+
+        - id: get-workspaces-public-full #full information about public workspace - no need to authorize
+          uri: lb://aggregator-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/public-workspaces/{workspaceId}/full
+            - Method=GET
 
         - id: get-desk-full #full information about desk - with inner desks and tasks
           uri: lb://aggregator-rs
