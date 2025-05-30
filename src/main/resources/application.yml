@@ -17,7 +17,7 @@ app:
   gateway:
     api-prefix: /api/v1
   frontend:
-    origin: "http://192.168.0.125:5173"
+    origin: "http://192.168.0.190:5173"
 ###
 
 spring:
@@ -198,11 +198,38 @@ spring:
 
         ### Routes for managing  COMMENTS
         #######################################
-        - id: create-get-tasks #create task or get full list
+        - id: create-get-comments #create task or get full list
           uri: lb://task-comments-rs
           predicates:
             - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/comments
-            - Method=POST, GET
+            - Method=POST, GET, OPTIONS
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: delete-comments #create task or get full list
+          uri: lb://task-comments-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/comments/{commentId}
+            - Method=DELETE, OPTIONS
+          filters:
+            - JwtAuthorizationFilter
+
+
+        ### Routes for managing  Stickers
+        #######################################
+        - id: create-get-stickers #create task or get full list
+          uri: lb://sticker-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/stickers
+            - Method=POST, GET, OPTIONS
+          filters:
+            - JwtAuthorizationFilter
+
+        - id: delete-sticker #create task or get full list
+          uri: lb://sticker-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/tasks/{taskId}/stickers/{stickerId}
+            - Method=DELETE, OPTIONS
           filters:
             - JwtAuthorizationFilter
 
@@ -272,14 +299,6 @@ spring:
             - Path=${app.gateway.api-prefix}/public-workspaces/{workspaceId}/full
             - Method=GET
 
-        - id: get-desk-full #full information about desk - with inner desks and tasks
-          uri: lb://aggregator-rs
-          predicates:
-            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/desks/{deskId}/full
-            - Method=GET
-          filters:
-            - JwtAuthorizationFilter
-
         - id: get-task-comments-count #information about comments on each task
           uri: lb://aggregator-rs
           predicates:
@@ -287,6 +306,17 @@ spring:
             - Method=GET
           filters:
             - JwtAuthorizationFilter
+
+
+          ###Routes for subscription to websockets for real time updating
+        - id: subscribe-to-workspace-update #subscribe to websocket
+          uri: lb://realtime-service
+          predicates:
+            - Path=${app.gateway.api-prefix}/websocket/**
+          filters:
+            - JwtAuthorizationFilter
+            - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
 
 server.port: 8080
 
