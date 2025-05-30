@@ -16,6 +16,10 @@ discovery-service-user:
 app:
   gateway:
     api-prefix: /api/v1
+    rate-limiter:
+      replenish: 1
+      burst: 56
+      requested: 2
   frontend:
     origin: "http://192.168.0.190:5173"
 ###
