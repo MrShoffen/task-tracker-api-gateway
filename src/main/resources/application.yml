@@ -56,7 +56,7 @@ spring:
             allowCredentials: true
 
       httpclient:
-        connect-timeout: 5000
+        connect-timeout: 10000
         response-timeout: 30s
       default-filters:
         - name: RequestRateLimiter
