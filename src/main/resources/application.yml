@@ -331,3 +331,17 @@ eureka:
     register-with-eureka: false
   instance:
     prefer-ip-address: true
+
+management:
+  metrics:
+    tags:
+      application: ${spring.application.name}:${spring.application.instance_id}
+  endpoint:
+    metrics:
+      access: read_only
+    prometheus:
+      access: read_only
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, metrics
