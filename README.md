@@ -1,16 +1,22 @@
-# Getting Started
+## API Gateway
 
-### Reference Documentation
+Гейтвей сервис выступает в роли edge сервера, с которым напрямую общаются клиенты.
 
-For further reference, please consider the following sections:
+Он регистрируется в дискавери сервис и "знает" все внутренние адреса других сервисов.
+Все маршуты прописаны в application.yml файле.
 
-* [Official Gradle documentation](https://docs.gradle.org)
-* [Spring Boot Gradle Plugin Reference Guide](https://docs.spring.io/spring-boot/3.4.4/gradle-plugin)
-* [Create an OCI image](https://docs.spring.io/spring-boot/3.4.4/gradle-plugin/packaging-oci-image.html)
+Получая запрс - сервис проверяет путь запроса и в зависимости от маршута - передает запрос в один из нижестоящих сервисов.
+Если есть несколько инстансов, то запросы идут по round robbin балансировке - по очереди в каждый инстанс.
 
-### Additional Links
+Также на гейтвее используется рейт лимитер  с сохранением промежуточного состояния в редисе. Рейт лимит идет по ip пользователя.
 
-These additional references should also help you:
+## Безопасность
+За регистрацию, вход (выдачу токенов) отвечает сервис аутентификации. Но гейтвей сервис знает ключ для проверки access токена.
 
-* [Gradle Build Scans – insights for your project's build](https://scans.gradle.com#gradle)
+На защищенных эндпоинтах стоит фильтр, который 
+проверяет и валидирует подпись access токена и то - просрочен он или нет. В случае 
+корректной подписи - запрос идет дальше. Иначе возвращается 401 статус.
 
+В случае успешной проверки гейтвей сервис устанавливает заголовок X-Authorized-User внутри которого содержится Id пользователя. С этим заголовком запрос оптравляется на следующие сервисы, где они могут работать с авторизованным пользователем.
+
+Так же гейтвей сервер проверяет CORS загаловки, для этого frontend origin указывается в application.yml файле
