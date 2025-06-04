@@ -112,6 +112,14 @@ spring:
           filters:
             - JwtAuthorizationFilter
 
+        - id: get-shared-workspaces #get all users workspaces or POST new one
+          uri: lb://workspace-manager-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/shared
+            - Method=GET
+          filters:
+            - JwtAuthorizationFilter
+
         - id: delete-workspace-with-id #delete workspace with specified id
           uri: lb://workspace-manager-rs
           predicates:
@@ -219,6 +227,17 @@ spring:
             - JwtAuthorizationFilter
 
 
+        ### Routes for getting  TASK HISTORY
+        #######################################
+        - id: get-task-history
+          uri: lb://task-history-rs
+          predicates:
+            - Path=${app.gateway.api-prefix}/workspaces/{workspaceId}/tasks/{taskId}/history
+            - Method=GET
+          filters:
+            - JwtAuthorizationFilter
+
+
         ### Routes for managing  Stickers
         #######################################
         - id: create-get-stickers #create task or get full list
@@ -288,6 +307,7 @@ spring:
             - Method=GET
 
           ###Routes for subscription to websockets for real time updating
+          #######################################
         - id: subscribe-to-workspace-update #subscribe to websocket
           uri: lb://realtime-service
           predicates:
